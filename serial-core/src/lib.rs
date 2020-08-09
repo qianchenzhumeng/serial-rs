@@ -585,9 +585,9 @@ impl<T> SerialPort for T
     }
 
     fn configure(&mut self, settings: &PortSettings) -> ::Result<()> {
-        let mut device_settings = try!(T::read_settings(self));
+        let mut device_settings = T::read_settings(self)?;
 
-        try!(device_settings.set_baud_rate(settings.baud_rate));
+        device_settings.set_baud_rate(settings.baud_rate)?;
         device_settings.set_char_size(settings.char_size);
         device_settings.set_parity(settings.parity);
         device_settings.set_stop_bits(settings.stop_bits);
@@ -597,8 +597,8 @@ impl<T> SerialPort for T
     }
 
     fn reconfigure(&mut self, setup: &Fn(&mut SerialPortSettings) -> ::Result<()>) -> ::Result<()> {
-        let mut device_settings = try!(T::read_settings(self));
-        try!(setup(&mut device_settings));
+        let mut device_settings = T::read_settings(self)?;
+        setup(&mut device_settings)?;
         T::write_settings(self, &device_settings)
     }
 

@@ -69,8 +69,8 @@ impl TTYPort {
         };
 
         // get exclusive access to device
-        if let Err(err) = ioctl::tiocexcl(port.fd) {
-            return Err(super::error::from_io_error(err));
+        match ioctl::tiocexcl(port.fd) {
+            _ => {},
         }
 
         // clear O_NONBLOCK flag
@@ -79,8 +79,8 @@ impl TTYPort {
         }
 
         // apply initial settings
-        let settings = try!(port.read_settings());
-        try!(port.write_settings(&settings));
+        let settings = port.read_settings()?;
+        port.write_settings(&settings)?;
 
         Ok(port)
     }
@@ -126,7 +126,7 @@ impl AsRawFd for TTYPort {
 
 impl io::Read for TTYPort {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        try!(super::poll::wait_read_fd(self.fd, self.timeout));
+        super::poll::wait_read_fd(self.fd, self.timeout)?;
 
         let len = unsafe {
             libc::read(self.fd, buf.as_ptr() as *mut c_void, buf.len() as size_t)
@@ -143,7 +143,7 @@ impl io::Read for TTYPort {
 
 impl io::Write for TTYPort {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        try!(super::poll::wait_write_fd(self.fd, self.timeout));
+        super::poll::wait_write_fd(self.fd, self.timeout)?;
 
         let len = unsafe {
             libc::write(self.fd, buf.as_ptr() as *mut c_void, buf.len() as size_t)
@@ -169,7 +169,7 @@ impl SerialDevice for TTYPort {
         use termios::{CREAD, CLOCAL}; // cflags
         use termios::{ICANON, ECHO, ECHOE, ECHOK, ECHONL, ISIG, IEXTEN}; // lflags
         use termios::{OPOST}; // oflags
-        use termios::{INLCR, IGNCR, ICRNL, IGNBRK}; // iflags
+        use termios::{BRKINT, INLCR, IGNCR, ICRNL, IGNBRK, INPCK, ISTRIP, IXON, PARMRK}; // iflags
         use termios::{VMIN, VTIME}; // c_cc indexes
 
         let mut termios = match termios::Termios::from_fd(self.fd) {
@@ -181,10 +181,10 @@ impl SerialDevice for TTYPort {
         termios.c_cflag |= CREAD | CLOCAL;
         termios.c_lflag &= !(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ISIG | IEXTEN);
         termios.c_oflag &= !OPOST;
-        termios.c_iflag &= !(INLCR | IGNCR | ICRNL | IGNBRK);
+        termios.c_iflag &= !(BRKINT | ICRNL | IGNBRK | IGNCR | INLCR | INPCK | ISTRIP | IXON | PARMRK );
 
-        termios.c_cc[VMIN] = 0;
-        termios.c_cc[VTIME] = 0;
+        termios.c_cc[VMIN] = 1;
+        termios.c_cc[VTIME] = 5;
 
         Ok(TTYSettings::new(termios))
     }
