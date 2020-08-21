@@ -15,4 +15,4 @@ categories = ["hardware-support", "os", "os::unix-apis"]
 serial-core = { version = "0.4", path = "../serial-core" }
 libc = "0.2.27"
 termios = { version = "0.3", path = "../../termios-rs" }
-ioctl-rs = "0.1.5"
+ioctl-rs = { path = "../../ioctl-rs" }
